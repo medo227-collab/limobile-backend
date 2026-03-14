@@ -1,14 +1,12 @@
-from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
-
-db = SQLAlchemy()
+from src.models.user import db
 
 class Account(db.Model):
     __tablename__ = 'accounts'
     
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    operator = db.Column(db.String(20), nullable=False)  # 'airtel', 'moov', 'zamani'
+    operator = db.Column(db.String(20), nullable=False)
     balance = db.Column(db.Integer, default=0)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
@@ -27,7 +25,7 @@ class Transaction(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     account_id = db.Column(db.Integer, db.ForeignKey('accounts.id'), nullable=True)
-    type = db.Column(db.String(20), nullable=False)  # 'transfer', 'forfait', 'deposit'
+    type = db.Column(db.String(20), nullable=False)
     description = db.Column(db.String(255), nullable=False)
     amount = db.Column(db.Integer, nullable=False)
     operator = db.Column(db.String(20), nullable=True)
