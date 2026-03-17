@@ -1,53 +1,52 @@
 from flask import Blueprint, request, jsonify
-from kkiapay import Kkiapay
-import os
+from src.models.user import Account, Transaction, db
 
-transfer_bp = Blueprint("transfer_bp", __name__)
+transfer_bp = Blueprint("transfer", __name__)
 
-# Configuration Kkiapay
-KKIAPAY_PUBLIC_KEY = os.getenv('KKIAPAY_PUBLIC_KEY', 'test_public_key')
-KKIAPAY_PRIVATE_KEY = os.getenv('KKIAPAY_PRIVATE_KEY', 'test_private_key')
-KKIAPAY_SECRET = os.getenv('KKIAPAY_SECRET', 'test_secret')
-SANDBOX_MODE = os.getenv('KKIAPAY_SANDBOX', 'true').lower() == 'true'
-
-k = Kkiapay(
-    public_key=KKIAPAY_PUBLIC_KEY,
-    private_key=KKIAPAY_PRIVATE_KEY,
-    secret=KKIAPAY_SECRET,
-    sandbox=SANDBOX_MODE
-)
-
-@transfer_bp.route("/credit", methods=["POST"])
+@transfer_bp.route("/transfer", methods=["POST"])
 def transfer_credit():
-    data = request.get_json()
-    source_operator = data.get("source_operator")
-    destination_number = data.get("destination_number")
-    amount = data.get("amount")
-
-    if not all([source_operator, destination_number, amount]):
-        return jsonify({"status": "error", "message": "Données manquantes"}), 400
-
-    # En mode simulation, on retourne directement un succès
-    if SANDBOX_MODE:
-        print(f"Simulation de transfert de {amount} F de {source_operator} vers {destination_number}")
-        return jsonify({
-            "status": "success", 
-            "message": f"Transfert de {amount} F vers {destination_number} simulé avec succès !",
-            "transaction_id": "SIMUL_" + str(hash(f"{amount}{destination_number}"))[:8]
-        }), 200
-    
-    # En mode production, ici on intégrerait la logique réelle avec l'API des opérateurs
-    # via Kkiapay ou d'autres agrégateurs
+    """Transfert de crédit entre comptes"""
     try:
-        # Logique de transfert réel à implémenter
+        data = request.get_json()
+        user_id = data.get("user_id")
+        source_operator = data.get("source_operator")
+        destination_number = data.get("destination_number")
+        amount = data.get("amount")
+
+        if not all([user_id, source_operator, destination_number, amount]):
+            return jsonify({"success": False, "message": "Données manquantes"}), 400
+
+        # Chercher le compte source
+        account = Account.query.filter_by(user_id=user_id, operator=source_operator).first()
+        if not account:
+            return jsonify({"success": False, "message": "Compte non trouvé"}), 404
+
+        # Vérifier le solde
+        if account.balance < amount:
+            return jsonify({"success": False, "message": "Solde insuffisant"}), 400
+
+        # Effectuer le transfert
+        account.balance -= amount
+        
+        # Enregistrer la transaction
+        transaction = Transaction(
+            user_id=user_id,
+            account_id=account.id,
+            type='transfer',
+            amount=-amount,
+            description=f'Transfert vers {destination_number}',
+            operator=source_operator
+        )
+        db.session.add(transaction)
+        db.session.commit()
+
         return jsonify({
-            "status": "success", 
-            "message": f"Transfert de {amount} F vers {destination_number} effectué avec succès !"
+            "success": True,
+            "message": "Transfert effectué",
+            "transaction_id": transaction.id,
+            "new_balance": account.balance
         }), 200
+
     except Exception as e:
-        return jsonify({
-            "status": "error", 
-            "message": f"Erreur lors du transfert : {str(e)}"
-        }), 500
-
-
+        db.session.rollback()
+        return jsonify({"success": False, "message": str(e)}), 500
