@@ -81,7 +81,7 @@ class Transaction(db.Model):
             'amount': self.amount,
             'description': self.description,
             'operator': self.operator,
-            'created_at': self.created_at.isoformat() if self.created_at else None
+            'created_at': self.created_at.strftime('%Y-%m-%d %H:%M:%S') if self.created_at else None
         }
 
     def __repr__(self):
