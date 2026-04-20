@@ -11,6 +11,7 @@ from src.routes.transfer import transfer_bp
 from src.routes.forfait import forfait_bp
 from src.routes.kkiapay_service import kkiapay_bp
 from src.routes.operator_api import operator_api_bp
+from src.routes.africas_talking import africas_talking_bp
 
 app = Flask(__name__, static_folder=os.path.join(os.path.dirname(__file__), 'static'))
 app.config['SECRET_KEY'] = 'asdf#FGSgvasgf$5$WGT'
@@ -24,6 +25,7 @@ app.register_blueprint(transfer_bp, url_prefix='/api')
 app.register_blueprint(forfait_bp, url_prefix='/api')
 app.register_blueprint(kkiapay_bp, url_prefix='/api/kkiapay')
 app.register_blueprint(operator_api_bp, url_prefix='/api/operators')
+app.register_blueprint(africas_talking_bp, url_prefix='/api')
 
 # Configuration de la base de données
 app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{os.path.join(os.path.dirname(__file__), 'database', 'app.db')}"
